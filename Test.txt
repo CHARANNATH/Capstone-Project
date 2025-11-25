@@ -1,1 +1,60 @@
-Hello
+// Service
+public interface CustomerAuthService {
+    /**
+     * @return true if credentials are valid, false otherwise
+     */
+    boolean authenticate(String username, String password);
+}
+
+// ServiceImpl
+@Service
+public class CustomerAuthServiceImpl implements CustomerAuthService {
+
+    private final CustomerRepository customerRepository; // assume you have this
+
+    public CustomerAuthServiceImpl(CustomerRepository customerRepository) {
+        this.customerRepository = customerRepository;
+    }
+
+    @Override
+    public boolean authenticate(String username, String password) {
+        Optional<Customer> optionalCustomer = customerRepository.findByUsername(username);
+        if (optionalCustomer.isEmpty()) {
+            return false;
+        }
+
+        Customer customer = optionalCustomer.get();
+        // TODO: replace with password encoder check if using encoded passwords
+        return customer.getPassword().equals(password);
+    }
+}
+
+
+// API (Controller)
+@RestController
+@RequestMapping("/customer")
+public class CustomerAuthController {
+
+    private final CustomerAuthService customerAuthService;
+
+    public CustomerAuthController(CustomerAuthService customerAuthService) {
+        this.customerAuthService = customerAuthService;
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        boolean isAuthenticated = customerAuthService.authenticate(
+                request.getUsername(),
+                request.getPassword()
+        );
+
+        if (isAuthenticated) {
+            return ResponseEntity
+                    .ok(new LoginResponse("The customer authentication successful."));
+        } else {
+            return ResponseEntity
+                    .badRequest()
+                    .body(new LoginResponse("The email address or password is incorrect."));
+        }
+    }
+}
